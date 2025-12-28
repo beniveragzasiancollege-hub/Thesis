@@ -1,112 +1,288 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+// app/index.js or App.js
+import React from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  StatusBar,
+  ScrollView,
+} from "react-native";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const RED = "#d62828";
+const LIGHT_GRAY = "#f2f2f2";
+const BORDER_GRAY = "#dddddd";
+const TEXT_GRAY = "#555555";
 
-export default function TabTwoScreen() {
+export default function IndexScreen() {
+  const insets = useSafeAreaInsets();
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <SafeAreaView
+      style={[
+        styles.container,
+        {
+          paddingTop: insets.top,     // respect status bar / notch
+          paddingBottom: insets.bottom, // respect home indicator
+        },
+      ]}
+    >
+      <StatusBar barStyle="light-content" />
+
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Centered max width so it looks good on big screens too */}
+        <View style={styles.inner}>
+          {/* Top header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>DSG - Dumaguete Safe Guide</Text>
+            <Text style={styles.headerSubtitle}>
+              Backend: “Supabase Mock”. PNP number updates every 10s.
+            </Text>
+          </View>
+
+          {/* Auth tabs */}
+          <View style={styles.tabRow}>
+            <TouchableOpacity
+              style={[styles.tabButton, styles.tabButtonActive]}
+            >
+              <Text style={[styles.tabText, styles.tabTextActive]}>
+                Sign In
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tabButton}>
+              <Text style={styles.tabText}>Register</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.tabButton}>
+              <Text style={styles.tabText}>Forgot?</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Content */}
+          <View style={styles.content}>
+            <Text style={styles.title}>Sign In to SafeDumaGuide</Text>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Email Address</Text>
+              <TextInput
+                placeholder="user@example.com"
+                placeholderTextColor="#9e9e9e"
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
+            </View>
+
+            <View style={styles.formGroup}>
+              <Text style={styles.label}>Password</Text>
+              <TextInput
+                placeholder="********"
+                placeholderTextColor="#9e9e9e"
+                secureTextEntry
+                style={styles.input}
+              />
+            </View>
+
+            <TouchableOpacity style={styles.forgotLinkWrapper}>
+              <Text style={styles.forgotLink}>Forgot Password?</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.signInButton}>
+              <Text style={styles.signInButtonText}>Sign In</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.registerText}>
+              Don’t have an account?{" "}
+              <Text style={styles.registerLink}>Register here</Text>
+            </Text>
+          </View>
+
+          {/* Bottom tab bar (fake UI) */}
+          <View style={styles.bottomTabs}>
+            <TouchableOpacity style={styles.bottomTab}>
+              <Text style={styles.bottomTabIcon}>🛡️</Text>
+              <Text style={styles.bottomTabLabel}>SafeDuma</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.bottomTab}>
+              <Text style={styles.bottomTabIcon}>📍</Text>
+              <Text style={styles.bottomTabLabel}>DumaGuide</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={[styles.bottomTab, styles.bottomTabActive]}>
+              <Text style={[styles.bottomTabIcon, styles.bottomTabLabelActive]}>
+                🔒
+              </Text>
+              <Text
+                style={[styles.bottomTabLabel, styles.bottomTabLabelActive]}
+              >
+                Profile
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+  container: {
+    flex: 1,
+    backgroundColor: "#ffffff",
   },
-  titleContainer: {
-    flexDirection: 'row',
-    gap: 8,
+  scrollContent: {
+    flexGrow: 1,
+  },
+  inner: {
+    flex: 1,
+    width: "100%",
+    maxWidth: 480, // keeps it nice on tablets / big screens
+    alignSelf: "center",
+  },
+  header: {
+    backgroundColor: RED,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  headerTitle: {
+    color: "#ffffff",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  headerSubtitle: {
+    color: "#fceaea",
+    fontSize: 11,
+    marginTop: 2,
+  },
+
+  tabRow: {
+    flexDirection: "row",
+    justifyContent: "space-around",
+    paddingHorizontal: 16,
+    paddingTop: 16,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 8,
+    marginHorizontal: 4,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: RED,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#ffffff",
+  },
+  tabButtonActive: {
+    backgroundColor: RED,
+  },
+  tabText: {
+    fontSize: 13,
+    color: RED,
+    fontWeight: "600",
+  },
+  tabTextActive: {
+    color: "#ffffff",
+  },
+
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 16,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 24,
+    color: "#222222",
+    textAlign: "center",
+  },
+  formGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 13,
+    color: TEXT_GRAY,
+    marginBottom: 6,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: BORDER_GRAY,
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    backgroundColor: "#ffffff",
+  },
+  forgotLinkWrapper: {
+    alignSelf: "flex-end",
+    marginBottom: 20,
+  },
+  forgotLink: {
+    fontSize: 12,
+    color: RED,
+  },
+  signInButton: {
+    backgroundColor: RED,
+    borderRadius: 6,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  signInButtonText: {
+    color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  registerText: {
+    textAlign: "center",
+    fontSize: 13,
+    color: TEXT_GRAY,
+    marginTop: 4,
+  },
+  registerLink: {
+    color: RED,
+    fontWeight: "600",
+  },
+
+  bottomTabs: {
+    flexDirection: "row",
+    backgroundColor: LIGHT_GRAY,
+    paddingVertical: 6,
+    paddingHorizontal: 8,
+    borderTopWidth: 1,
+    borderTopColor: BORDER_GRAY,
+  },
+  bottomTab: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 6,
+    borderRadius: 10,
+    marginHorizontal: 4,
+    backgroundColor: "#ffffff",
+  },
+  bottomTabActive: {
+    backgroundColor: RED,
+  },
+  bottomTabIcon: {
+    fontSize: 18,
+    marginBottom: 2,
+    color: TEXT_GRAY,
+  },
+  bottomTabLabel: {
+    fontSize: 11,
+    color: TEXT_GRAY,
+  },
+  bottomTabLabelActive: {
+    color: "#ffffff",
+    fontWeight: "700",
   },
 });
