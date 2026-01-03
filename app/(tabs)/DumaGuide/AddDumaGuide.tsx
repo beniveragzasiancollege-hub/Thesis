@@ -178,7 +178,7 @@ export default function AddDumaGuide() {
 
       Alert.alert(
         "Saved",
-        "Your place has been added to DumaGuide (visible only to you)."
+        "Your place has been added to DumaGuide."
       );
 
       // ⬇️ Go straight back to DumaGuide; it reloads on focus.
@@ -222,7 +222,7 @@ export default function AddDumaGuide() {
   return (
     <DsgLayout
       activeTab="dumaGuide"
-      subtitle="Add a custom location (only you can see it)."
+      subtitle="Add a custom location."
       contentStyle={styles.content}
     >
       <Text style={styles.title}>Add Duma Guide Place</Text>

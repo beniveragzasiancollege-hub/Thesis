@@ -205,7 +205,7 @@ const debugStorage = async () => {
   console.log("BUCKETS:", buckets, error);
 };
 debugStorage();
-
+  
 
   async function saveProfile() {
     if (!userId) return;

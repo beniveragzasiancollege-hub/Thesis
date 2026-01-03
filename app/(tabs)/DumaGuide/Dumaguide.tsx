@@ -62,6 +62,10 @@ export default function DumaGuide() {
   // ✅ ADD: role state
   const [role, setRole] = useState<"admin" | "user" | null>(null);
 
+  function isAdminCreated(p: DirectoryPlace, adminRole: "admin" | "user" | null) {
+  return p.created_by === null || adminRole === "admin";
+}
+
   const loadDirectory = useCallback(async () => {
     try {
       setLoading(true);
@@ -95,7 +99,6 @@ export default function DumaGuide() {
       if (catErr) return;
 
       const categories = catData ?? [];
-      setCategories(categories);
 
       // 3) places
       const { data: placeData, error: placeErr } = await supabase
@@ -114,8 +117,9 @@ export default function DumaGuide() {
 
           // ✅ UPDATED: role-aware canEdit
           const canEdit =
-            role === "admin" ||
-            (!!uid && !!p.created_by && p.created_by === uid);
+          resolvedRole === "admin" ||
+          (!!uid && !!p.created_by && p.created_by === uid);
+
 
           return {
             ...p,
@@ -126,13 +130,21 @@ export default function DumaGuide() {
         }) ?? [];
 
       // ✅ ADD: role-based visibility
-      const visiblePlaces = displayPlaces.filter((p) => {
-        if (role === "admin") return true;
-        if (!uid) return p.created_by === null;
-        return p.created_by === null || p.created_by === uid;
-      });
+      // ✅ ADD: role-based visibility
+   // ✅ FIXED: visibility handled by Supabase RLS, not frontend
+   // 🔹 Only show categories that actually have places
+    const usedCategoryIds = new Set(
+      displayPlaces.map((p) => p.category_id)
+    );
 
-      setPlaces(visiblePlaces);
+    const filteredCategories = categories.filter((cat) =>
+      usedCategoryIds.has(cat.id)
+    );
+
+    // ✅ Update visible category chips
+    setCategories(filteredCategories);
+
+    setPlaces(displayPlaces);
     } finally {
       setLoading(false);
     }
@@ -240,8 +252,6 @@ export default function DumaGuide() {
           ))}
         </View>
 
-        <Text style={styles.mainContact}>Contact: 0354221137</Text>
-
         {(role === "admin" || role === "user") && (
           <View style={styles.addRow}>
             <TouchableOpacity style={styles.addButton} onPress={goToAdd}>
@@ -300,7 +310,7 @@ export default function DumaGuide() {
                     </TouchableOpacity>
                   )}
 
-                  {!item.canEdit && item.contact_number && (
+                  {item.contact_number && (
                     <TouchableOpacity
                       style={[styles.callButton, { marginTop: 6 }]}
                       onPress={() => confirmCall(item)}
@@ -308,6 +318,7 @@ export default function DumaGuide() {
                       <Text style={styles.callIcon}>📞</Text>
                     </TouchableOpacity>
                   )}
+
                 </View>
               </View>
             </View>
@@ -341,9 +352,6 @@ function FilterChip({
     </TouchableOpacity>
   );
 }
-
-/* styles unchanged */
-
 
 /* STYLES – middle content only */
 

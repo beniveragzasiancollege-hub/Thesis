@@ -139,33 +139,47 @@ export default function DumaGuideEdit() {
     try {
       setSaving(true);
 
-      let effectiveCategoryId = categoryId;
+      let effectiveCategoryId: number;
 
-      if (categoryName.trim()) {
-        const normalizedInput = normalizeCategoryName(categoryName);
-
-        const { data: allCats } = await supabase
-          .from("directory_categories")
-          .select("*");
-
-        const match = (allCats as DirectoryCategory[] | null)?.find(
-          (c) => normalizeCategoryName(c.name) === normalizedInput
-        );
-
-        if (match) {
-          effectiveCategoryId = match.id;
-        }
-
-        if (effectiveCategoryId === null) {
-          const { data: inserted } = await supabase
-            .from("directory_categories")
-            .insert({ name: categoryName.trim() })
-            .select()
-            .single();
-
-          if (inserted) effectiveCategoryId = inserted.id;
-        }
+      if (!categoryName.trim()) {
+        Alert.alert("Missing category", "Category is required.");
+        return;
       }
+
+      // 1. Try to find existing category
+      const { data: allCats, error: catErr } = await supabase
+        .from("directory_categories")
+        .select("id, name");
+
+      if (catErr) {
+        Alert.alert("Error", "Failed to load categories.");
+        return;
+      }
+
+      const normalizedInput = normalizeCategoryName(categoryName);
+
+      const existing = allCats?.find(
+        (c) => normalizeCategoryName(c.name) === normalizedInput
+      );
+
+      if (existing) {
+        effectiveCategoryId = existing.id;
+      } else {
+        // 2. Create new category
+        const { data: inserted, error: insertErr } = await supabase
+          .from("directory_categories")
+          .insert({ name: categoryName.trim() })
+          .select("id")
+          .single();
+
+        if (insertErr || !inserted) {
+          Alert.alert("Error", "Failed to create category.");
+          return;
+        }
+
+        effectiveCategoryId = inserted.id;
+      }
+
 
       await supabase
         .from("directory_places")
@@ -177,8 +191,8 @@ export default function DumaGuideEdit() {
           longitude: selectedLng,
           category_id: effectiveCategoryId ?? categoryId,
         })
-        .eq("id", id)
-        .eq("created_by", userId);
+        .eq("id", id);
+
 
       Alert.alert("Saved", "Location updated successfully.");
       router.replace("/DumaGuide/Dumaguide");
@@ -278,30 +292,71 @@ export default function DumaGuideEdit() {
 /* unchanged map function */
 
 function buildLeafletPickerHtml(params: { lat: number | null; lng: number | null }) {
-  const { lat, lng } = params;
-  const centerLat = lat ?? 9.3068;
-  const centerLng = lng ?? 123.3054;
+  const centerLat = params.lat ?? 9.3068;
+  const centerLng = params.lng ?? 123.3054;
 
   return `
 <!DOCTYPE html>
 <html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<style>
+  html, body, #map {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+</style>
+</head>
 <body>
-<div id="map" style="height:100%"></div>
+<div id="map"></div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-const map = L.map('map').setView([${centerLat}, ${centerLng}], 14);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-let marker = ${lat && lng ? `L.marker([${lat}, ${lng}]).addTo(map)` : "null"};
-map.on('click', e => {
-  if (marker) map.removeLayer(marker);
-  marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
-  window.ReactNativeWebView.postMessage(JSON.stringify(e.latlng));
-});
+  const map = L.map('map', {
+    dragging: true,
+    zoomControl: true,
+    scrollWheelZoom: true,
+    doubleClickZoom: true,
+    touchZoom: true,
+    boxZoom: true,
+    keyboard: true
+  }).setView([${centerLat}, ${centerLng}], 15);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19
+  }).addTo(map);
+
+  let marker = ${params.lat && params.lng
+    ? `L.marker([${params.lat}, ${params.lng}]).addTo(map)`
+    : "null"};
+
+  map.on('click', function(e) {
+    if (marker) map.removeLayer(marker);
+    marker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(map);
+
+    window.ReactNativeWebView.postMessage(
+      JSON.stringify({
+        lat: e.latlng.lat,
+        lng: e.latlng.lng
+      })
+    );
+  });
+
+  // 🔥 Fix WebView sizing issue
+  setTimeout(() => {
+    map.invalidateSize();
+  }, 300);
 </script>
 </body>
-</html>`;
+</html>
+`;
 }
-
 const styles = StyleSheet.create({
   content: { paddingHorizontal: 16, paddingBottom: 24 },
   title: { fontSize: 18, fontWeight: "700", textAlign: "center", marginVertical: 16 },

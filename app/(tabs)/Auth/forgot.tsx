@@ -46,7 +46,6 @@ export default function Forgot() {
         "Check your email",
         "We sent a password reset link to your email if it exists in our system."
       );
-      router.replace("/Auth/sign-in");
     } catch (e: any) {
       console.error("Unexpected error:", e);
       Alert.alert("Error", "Something went wrong.");
