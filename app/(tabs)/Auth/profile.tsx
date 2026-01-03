@@ -12,6 +12,8 @@ import { supabase } from "@/lib/supabase";
 import { DsgLayout } from "@/components/DsgLayout";
 import { Image } from "react-native";
 import * as ImagePicker from "expo-image-picker";
+import { Buffer } from "buffer";
+import * as Updates from "expo-updates";
 
 const RED = "#d62828";
 const LIGHT_GRAY = "#f2f2f2";
@@ -43,10 +45,38 @@ export default function Profile() {
 
   const [reports, setReports] = useState<EmergencyReport[]>([]);
   const [loadingReports, setLoadingReports] = useState(true);
+  
+  function resetProfileState() {
+    setUserId(null);
+    setEmail("");
+    setFullName("");
+    setPhone("");
+    setAddress("");
+    setAvatarUrl(null);
+    setReports([]);
+    setEditing(false);
+  }
 
-  useEffect(() => {
-    loadProfileAndReports();
-  }, []);
+useEffect(() => {
+  const { data: subscription } = supabase.auth.onAuthStateChange(
+    (_event, session) => {
+      if (!session?.user) {
+        // fully reset local state when logged out
+        resetProfileState();
+        router.replace("/Auth/sign-in");
+        return;
+      }
+
+      // user changed → reload everything
+      loadProfileAndReports();
+    }
+  );
+
+  return () => {
+    subscription.subscription.unsubscribe();
+  };
+}, []);
+
 
   async function loadProfileAndReports() {
     try {
@@ -138,15 +168,15 @@ export default function Profile() {
     }
   }
 
- async function pickAvatar() {
+async function pickAvatar() {
   if (!userId) return;
 
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      quality: 0.7,
-      base64: true,
-    });
+  const result = await ImagePicker.launchImageLibraryAsync({
+    mediaTypes: ["images"],
+    allowsEditing: true,
+    quality: 0.7,
+    base64: true,
+  });
 
   if (result.canceled) return;
 
@@ -156,38 +186,18 @@ export default function Profile() {
     return;
   }
 
-  const ext = asset.uri.split(".").pop() || "jpg";
-  const filePath = `${userId}.${ext}`;
+  const filePath = `${userId}.jpg`;
+  const uint8Array = Buffer.from(asset.base64, "base64");
 
-  // Convert base64 → ArrayBuffer
-  const byteString = atob(asset.base64);
-  const arrayBuffer = new Uint8Array(byteString.length);
-  for (let i = 0; i < byteString.length; i++) {
-    arrayBuffer[i] = byteString.charCodeAt(i);
-  }
-
-  const base64 = result.assets[0].base64;
-
-  if (!base64) {
-    throw new Error("No base64 data");
-  }
-
-  const uint8Array = Uint8Array.from(
-    atob(base64),
-    (c) => c.charCodeAt(0)
-  );
-
-  const { error } = await supabase.storage
+  const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(filePath, uint8Array, {
-      contentType: `image/${ext}`,
+      contentType: "image/jpeg",
       upsert: true,
     });
 
-
-  if (error) {
-    console.error("Upload error:", error);
-    Alert.alert("Error", "Failed to upload avatar.");
+  if (uploadError) {
+    Alert.alert("Upload failed", uploadError.message);
     return;
   }
 
@@ -195,9 +205,19 @@ export default function Profile() {
     .from("avatars")
     .getPublicUrl(filePath);
 
+  // ✅ SAVE TO DATABASE IMMEDIATELY
+  const { error: dbError } = await supabase
+    .from("profiles")
+    .update({ avatar_url: data.publicUrl })
+    .eq("id", userId);
+
+  if (dbError) {
+    Alert.alert("Error", "Avatar uploaded but failed to save profile.");
+    return;
+  }
+
   setAvatarUrl(data.publicUrl);
 }
-
 const debugStorage = async () => {
   const { data: user } = await supabase.auth.getUser();
   const { data: buckets, error } = await supabase.storage.listBuckets();
@@ -328,7 +348,11 @@ debugStorage();
   }
 
   async function logout() {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut({ scope: "local" });
+
+    // Clear local state immediately
+    resetProfileState();
+
     router.replace("/Auth/sign-in");
   }
 

@@ -19,25 +19,25 @@ export default function IndexScreen() {
     const bootstrap = async () => {
       try {
         console.log("[Index] Checking Supabase session...");
-        const { data, error } = await supabase.auth.getUser();
+
+        const { data, error } = await supabase.auth.getSession();
 
         if (!isMounted) return;
 
-        if (error) {
-          // This error is normal if there is no session:
-          // [AuthSessionMissingError: Auth session missing!]
-          console.log("[Index] getUser error:", error.message);
-        } else {
-          console.log("[Index] getUser result:", data?.user ? "has user" : "no user");
+        // ✅ If user HAS a session → go to app
+        if (data?.session) {
+          console.log("[Index] Session found");
+          router.replace("/Home/Safeduma");
+          return;
         }
 
-        // ✅ Either way, go into the app. Auth is handled inside other screens.
-        router.replace("/Home/Safeduma");
+        // ✅ NO session (normal for logout / forgot / reset)
+        console.log("[Index] No session, redirecting to sign-in");
+        router.replace("/Auth/sign-in");
       } catch (e) {
-        console.error("[Index] Unexpected error in bootstrap:", e);
+        console.error("[Index] Unexpected error:", e);
         if (isMounted) {
-          // Fallback: still go to main app instead of hanging
-          router.replace("/Home/Safeduma");
+          router.replace("/Auth/sign-in");
         }
       }
     };

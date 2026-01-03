@@ -32,7 +32,7 @@ export default function Forgot() {
       const { error } = await supabase.auth.resetPasswordForEmail(
         email.trim(),
         {
-          redirectTo: "dsg://reset-password"
+          redirectTo: "dsg://Auth/reset-password",
         }
       );
 

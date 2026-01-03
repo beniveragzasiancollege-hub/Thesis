@@ -33,6 +33,13 @@ export default function Register() {
       return;
     }
 
+    if (password.length < 4) {
+      Alert.alert(
+        "Invalid password",
+        "Password must be more than 3 characters."
+      );
+      return; // ⛔ stops execution → no looping
+    }
     if (password !== confirmPassword) {
       Alert.alert("Password mismatch", "Passwords do not match.");
       return;
