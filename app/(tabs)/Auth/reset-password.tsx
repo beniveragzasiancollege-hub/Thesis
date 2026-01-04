@@ -26,28 +26,36 @@ export default function ResetPassword() {
   const [showConfirm, setShowConfirm] = useState(false);
 
 useEffect(() => {
+  if (ready) {
+    console.log("[Reset] Session already initialized, ignoring URL");
+    return;
+  }
+
   const handleUrl = async (url: string) => {
-    // 🔥 IMPORTANT: parse hash manually
-    const hash = url.split("#")[1];
-    if (!hash) {
-      Alert.alert("Invalid or expired reset link");
-      router.replace("/Auth/forgot");
-      return;
+    console.log("[Reset] Incoming URL:", url);
+
+    const parsed = Linking.parse(url);
+    const queryParams = parsed.queryParams ?? {};
+
+    let hashParams: Record<string, string> = {};
+    if (url.includes("#")) {
+      const hash = url.split("#")[1];
+      hashParams = Object.fromEntries(
+        hash.split("&").map(p => {
+          const [k, v] = p.split("=");
+          return [k, decodeURIComponent(v)];
+        })
+      );
     }
 
-    const params = Object.fromEntries(
-      hash.split("&").map(p => p.split("="))
-    );
+    const params = { ...queryParams, ...hashParams };
 
-    const access_token = params.access_token;
-    const refresh_token = params.refresh_token;
-    const type = params.type;
+    const access_token = params.access_token as string;
+    const refresh_token = params.refresh_token as string;
 
-    if (type !== "recovery" || !access_token || !refresh_token) {
-      Alert.alert("Invalid or expired reset link");
-      router.replace("/Auth/forgot");
-      return;
-    }
+    // ✅ SINGLE DELAYED FIRST ATTEMPT (NO RETRIES)
+    console.log("[Reset] Waiting for recovery session to activate…");
+    await new Promise(res => setTimeout(res, 1000));
 
     const { error } = await supabase.auth.setSession({
       access_token,
@@ -55,12 +63,11 @@ useEffect(() => {
     });
 
     if (error) {
-      Alert.alert("Session error", error.message);
-      router.replace("/Auth/forgot");
+      router.replace("/Auth/sign-in");
       return;
     }
 
-    // ✅ NOW the session exists
+    console.log("[Reset] Recovery session established");
     setReady(true);
   };
 
@@ -70,41 +77,49 @@ useEffect(() => {
 
   const sub = Linking.addEventListener("url", ({ url }) => handleUrl(url));
   return () => sub.remove();
-}, []);
+}, [ready]);
 
 
-  async function handleReset() {
-    if (!ready) {
-      Alert.alert("Please wait", "Initializing reset session…");
-      return;
-    }
-
-    if (password.length < 3) {
-      Alert.alert("No Password", "Password must be at least more than 3 characters.");
-      return;
-    }
-
-    if (password !== confirm) {
-      Alert.alert("Mismatch", "Passwords do not match.");
-      return;
-    }
-
-    setSaving(true);
-
-    const { error } = await supabase.auth.updateUser({ password });
-
-    if (error) {
-      Alert.alert("Error", error.message);
-      setSaving(false);
-      return;
-    }
-
-    Alert.alert("Success", "Password updated. Please sign in.");
-    setPassword("");
-    setConfirm("");
-    await supabase.auth.signOut();
-    router.replace("/Auth/sign-in");
+async function handleReset() {
+  if (!ready) {
+    Alert.alert("Please wait", "Initializing reset session…");
+    return;
   }
+
+  if (password.length < 3) {
+    Alert.alert("No Password", "Password must be at least more than 3 characters.");
+    return;
+  }
+
+  if (password !== confirm) {
+    Alert.alert("Mismatch", "Passwords do not match.");
+    return;
+  }
+
+  setSaving(true);
+
+  const { error } = await supabase.auth.updateUser({ password });
+
+  if (error) {
+    Alert.alert("Error", error.message);
+    setSaving(false);
+    return;
+  }
+
+  // 🔐 HARD LOGOUT
+  await supabase.auth.signOut({ scope: "global" });
+
+  // 🧼 CLEAR LOCAL STATE
+  setPassword("");
+  setConfirm("");
+  setReady(false);
+  setSaving(false);
+
+  Alert.alert("Success", "Password updated. Please sign in.");
+  // 🔁 RESET FLOW
+  router.replace("/Auth/sign-in");
+}
+
 
   return (
     <DsgLayout

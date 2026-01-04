@@ -21,6 +21,8 @@ export default function Forgot() {
   const [sending, setSending] = useState(false);
 
   const handleReset = async () => {
+    if (sending) return;
+
     if (!email.trim()) {
       Alert.alert("Missing email", "Please enter your email.");
       return;
@@ -46,6 +48,7 @@ export default function Forgot() {
         "Check your email",
         "We sent a password reset link to your email if it exists in our system."
       );
+      setEmail("");
     } catch (e: any) {
       console.error("Unexpected error:", e);
       Alert.alert("Error", "Something went wrong.");

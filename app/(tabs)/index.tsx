@@ -7,47 +7,8 @@ import {
   StatusBar,
   ActivityIndicator,
 } from "react-native";
-import { useRouter } from "expo-router";
-import { supabase } from "@/lib/supabase";
 
 export default function IndexScreen() {
-  const router = useRouter();
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const bootstrap = async () => {
-      try {
-        console.log("[Index] Checking Supabase session...");
-
-        const { data, error } = await supabase.auth.getSession();
-
-        if (!isMounted) return;
-
-        // ✅ If user HAS a session → go to app
-        if (data?.session) {
-          console.log("[Index] Session found");
-          router.replace("/Home/Safeduma");
-          return;
-        }
-
-        // ✅ NO session (normal for logout / forgot / reset)
-        console.log("[Index] No session, redirecting to sign-in");
-        router.replace("/Auth/sign-in");
-      } catch (e) {
-        console.error("[Index] Unexpected error:", e);
-        if (isMounted) {
-          router.replace("/Auth/sign-in");
-        }
-      }
-    };
-
-    bootstrap();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [router]);
 
   return (
     <View style={styles.root}>
