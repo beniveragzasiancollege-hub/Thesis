@@ -186,14 +186,15 @@ async function pickAvatar() {
     return;
   }
 
-  const filePath = `${userId}.jpg`;
+  // ✅ VERSIONED FILENAME
+  const filePath = `${userId}-${Date.now()}.jpg`;
   const uint8Array = Buffer.from(asset.base64, "base64");
 
+  // ✅ UPLOAD (NO UPSERT NEEDED)
   const { error: uploadError } = await supabase.storage
     .from("avatars")
     .upload(filePath, uint8Array, {
       contentType: "image/jpeg",
-      upsert: true,
     });
 
   if (uploadError) {
@@ -201,11 +202,12 @@ async function pickAvatar() {
     return;
   }
 
+  // ✅ GET NEW PUBLIC URL
   const { data } = supabase.storage
     .from("avatars")
     .getPublicUrl(filePath);
 
-  // ✅ SAVE TO DATABASE IMMEDIATELY
+  // ✅ SAVE NEW URL TO PROFILE
   const { error: dbError } = await supabase
     .from("profiles")
     .update({ avatar_url: data.publicUrl })
@@ -216,8 +218,11 @@ async function pickAvatar() {
     return;
   }
 
+  // ✅ UI UPDATES IMMEDIATELY
   setAvatarUrl(data.publicUrl);
+  await loadProfileAndReports();
 }
+
 const debugStorage = async () => {
   const { data: user } = await supabase.auth.getUser();
   const { data: buckets, error } = await supabase.storage.listBuckets();
@@ -236,15 +241,14 @@ debugStorage();
       // 1) update profiles table
       const { error: profileError } = await supabase
         .from("profiles")
-        .upsert({
-          id: userId,
+        .update({
           full_name: fullName.trim() || null,
           phone: phone.trim() || null,
           address: address.trim() || null,
           updated_at: new Date().toISOString(),
-          avatar_url: avatarUrl,
+        })
+        .eq("id", userId);
 
-        });
 
       if (profileError) {
         console.error("profiles upsert error:", profileError);
@@ -272,8 +276,10 @@ debugStorage();
         return;
       }
 
+      await loadProfileAndReports();
       Alert.alert("Saved", "Profile updated successfully.");
       setEditing(false);
+
     } catch (e: any) {
       console.error("Unexpected error:", e);
       Alert.alert("Error", "Something went wrong.");
@@ -306,13 +312,14 @@ debugStorage();
       // clear profiles row
       const { error: profileError } = await supabase
         .from("profiles")
-        .upsert({
-          id: userId,
+        .update({
           full_name: null,
           phone: null,
           address: null,
           updated_at: new Date().toISOString(),
-        });
+        })
+        .eq("id", userId);
+
 
       if (profileError) {
         console.error("clearProfileData profiles error:", profileError);
