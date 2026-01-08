@@ -47,6 +47,11 @@ export default function SafeDuma() {
   const [sending, setSending] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
 
+  // ⚠️ warning modal
+  const [showWarning, setShowWarning] = useState(false);
+  const [pendingAction, setPendingAction] =
+    useState<null | (() => void)>(null);
+
   useEffect(() => {
     loadData();
   }, []);
@@ -77,14 +82,8 @@ export default function SafeDuma() {
       return;
     }
 
-    Alert.alert(
-      "Confirm Send",
-      `Are you sure you want to send this message to ${selectedContact.name}?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        { text: "Send", style: "destructive", onPress: sendSms },
-      ]
-    );
+    setPendingAction(() => sendSms);
+    setShowWarning(true);
   }
 
   function sendSms() {
@@ -116,6 +115,12 @@ export default function SafeDuma() {
             number={c.phone_number}
             color={quickDialColor(index, C)}
             isLive={c.is_live}
+            onPress={() => {
+              setPendingAction(() => () =>
+                Linking.openURL(`tel:${c.phone_number}`)
+              );
+              setShowWarning(true);
+            }}
           />
         ))}
       </View>
@@ -239,17 +244,63 @@ export default function SafeDuma() {
           </TouchableOpacity>
         </View>
       </Modal>
+
+      {/* ⚠️ LEGAL WARNING MODAL */}
+      <Modal visible={showWarning} transparent animationType="fade">
+        <View style={styles.warningBackdrop}>
+          <View style={styles.warningBox}>
+            <Text style={styles.warningTitle}>⚠️ Legal Warning</Text>
+
+            <Text style={styles.warningText}>
+              This feature is for REAL emergencies only.
+            </Text>
+
+            <Text style={styles.warningText}>
+              Under the Cybercrime Prevention Act of 2012 (Republic Act No. 10175),
+              false reports, prank calls, or misuse of emergency services are
+              punishable by law.
+            </Text>
+
+            <Text style={styles.warningText}>
+              Proceed only if this is a legitimate emergency.
+            </Text>
+
+            <View style={styles.warningActions}>
+              <TouchableOpacity
+                style={styles.warningCancel}
+                onPress={() => {
+                  setShowWarning(false);
+                  setPendingAction(null);
+                }}
+              >
+                <Text style={styles.warningCancelText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.warningConfirm}
+                onPress={() => {
+                  setShowWarning(false);
+                  pendingAction?.();
+                  setPendingAction(null);
+                }}
+              >
+                <Text style={styles.warningConfirmText}>I Understand</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </DsgLayout>
   );
 }
 
 /* ---- Components ---- */
 
-function QuickDialCard({ title, number, color, isLive }: any) {
+function QuickDialCard({ title, number, color, isLive, onPress }: any) {
   return (
     <TouchableOpacity
       style={[styles.dialCard, { backgroundColor: color }]}
-      onPress={() => Linking.openURL(`tel:${number}`)}
+      onPress={onPress}
     >
       <Text style={styles.dialTitle}>
         {title}
@@ -324,7 +375,6 @@ const styles = StyleSheet.create({
     padding: 12,
   },
   selectorInner: { flexDirection: "row", alignItems: "center" },
-  selectorLabel: { fontSize: 11 },
   selectorValue: { fontSize: 14, fontWeight: "600" },
   selectorPlaceholder: { color: "#999", fontWeight: "400" },
   chevron: { fontSize: 18 },
@@ -378,5 +428,57 @@ const styles = StyleSheet.create({
   modalCancelText: {
     fontWeight: "700",
     fontSize: 14,
+  },
+
+  /* ⚠️ Warning styles */
+  warningBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  warningBox: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 16,
+    width: "100%",
+    maxWidth: 400,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 13,
+    color: "#444",
+    marginBottom: 8,
+  },
+  warningActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginTop: 12,
+  },
+  warningCancel: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginRight: 8,
+  },
+  warningCancelText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#666",
+  },
+  warningConfirm: {
+    backgroundColor: "#d62828",
+    borderRadius: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+  },
+  warningConfirmText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });

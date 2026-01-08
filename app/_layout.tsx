@@ -1,47 +1,75 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import 'react-native-reanimated';
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
+import { Stack, router, usePathname } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import "react-native-reanimated";
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useColorScheme } from "@/hooks/use-color-scheme";
 
-// ✅ EXISTING imports
-import { BackHandler, Platform } from 'react-native';
-import { useEffect } from 'react';
+import { BackHandler, Platform } from "react-native";
+import { useEffect } from "react";
+import * as Linking from "expo-linking";
 
-// ✅ ADDED import (Supabase + router)
-import { supabase } from '@/lib/supabase';
-import { router } from 'expo-router';
+import { supabase } from "@/lib/supabase";
 
 export const unstable_settings = {
-  anchor: '(tabs)',
+  anchor: "(tabs)",
 };
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const pathname = usePathname();
 
-  // ✅ EXISTING: global Android back-button blocker
+  /**
+   * 🚫 IGNORE ALL INCOMING DEEP LINKS
+   * (OTP emails may contain a fallback link like dsg:///)
+   */
 useEffect(() => {
-  if (Platform.OS !== 'android') return;
+  const { data: listener } = supabase.auth.onAuthStateChange(
+    (event, session) => {
+      // ✅ allow OTP + verification session
+      if (event === "SIGNED_IN") return;
 
-  const subscription = BackHandler.addEventListener(
-    'hardwareBackPress',
-    () => {
-      // allow back during deep links & auth flows
-      return false;
+      if (!session) {
+        router.replace("/Auth/sign-in");
+      }
     }
   );
 
-  return () => subscription.remove();
+  return () => listener.subscription.unsubscribe();
 }, []);
 
 
-  // ✅ ADDED: GLOBAL AUTH STATE LISTENER (NO existing code touched)
+  /**
+   * 🔙 ANDROID BACK BUTTON HANDLER
+   */
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+
+    const subscription = BackHandler.addEventListener(
+      "hardwareBackPress",
+      () => {
+        // ✅ Allow app exit on sign-in screen
+        if (pathname === "/Auth/sign-in") {
+          return false;
+        }
+
+        // 🔐 Force everything else back to sign-in
+        router.replace("/Auth/sign-in");
+        return true;
+      }
+    );
+
+    return () => subscription.remove();
+  }, [pathname]);
+
+  /**
+   * 🔐 GLOBAL AUTH GUARD (OTP-SAFE)
+   */
   useEffect(() => {
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         if (!session) {
-          router.replace('/Auth/sign-in');
+          router.replace("/Auth/sign-in");
         }
       }
     );
@@ -52,12 +80,12 @@ useEffect(() => {
   }, []);
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={colorScheme === "dark" ? DarkTheme : DefaultTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen
           name="modal"
-          options={{ presentation: 'modal', title: 'Modal' }}
+          options={{ presentation: "modal", title: "Modal" }}
         />
       </Stack>
       <StatusBar style="auto" />
